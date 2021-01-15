@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Blast.API.Controllers.Keyboard;
@@ -36,12 +37,13 @@ namespace Clipboard.Fluent.Plugin
             _supportedOperations = new List<ISearchOperation>
             {
                 new PasteSearchOperation(),
-                new CopySearchOperation()
+                new CopySearchOperation(),
+                new RemoveSearchOperation()
             };
             _applicationInfo = new SearchApplicationInfo(SearchAppName,
                 "Search in your clipboard history", _supportedOperations)
             {
-                MinimumSearchLength = 1,
+                MinimumSearchLength = 0,
                 IsProcessSearchEnabled = false,
                 IsProcessSearchOffline = false,
                 ApplicationIconGlyph = CopyIconGlyph,
@@ -85,14 +87,17 @@ namespace Clipboard.Fluent.Plugin
                 string searchedTag = searchRequest.SearchedTag;
 
                 bool searchTagIsNotEmpty = !string.IsNullOrWhiteSpace(searchedTag);
-                if (searchTagIsNotEmpty && !searchedTag.Equals(SearchTag))
+                bool searchTextIsEmpty = string.IsNullOrWhiteSpace(searchedText);
+                if (searchTagIsNotEmpty && !searchedTag.Equals(SearchTag) ||
+                    !searchTagIsNotEmpty && searchTextIsEmpty)
                     yield break;
 
-                foreach (string copy in _clipboardHistory)
+                for (var i = _clipboardHistory.Count - 1; i >= 0; i--)
                 {
+                    string copy = _clipboardHistory.ElementAt(i);
                     double score = copy.SearchTokens(searchedText) * 2;
                     // Return results if the search worked or the tag used 
-                    if (score > 0 || searchTagIsNotEmpty)
+                    if (score > 0 || searchTagIsNotEmpty && searchTextIsEmpty)
                         yield return new ClipboardSearchResult(CopyIconGlyph, searchedText, copy, score,
                             _supportedOperations,
                             _searchTags);
@@ -114,6 +119,17 @@ namespace Clipboard.Fluent.Plugin
         {
             ISearchOperation selectedOperation = searchResult.SelectedOperation;
             Type selectedOperationType = selectedOperation.GetType();
+
+            if (selectedOperationType == typeof(RemoveSearchOperation))
+            {
+                _clipboardHistory.Remove(searchResult.ResultName);
+                searchResult.RemoveResult = true;
+                // If the current text is in the clipboard then replace it with empty string so it won't be added to history again
+                if (TextCopy.Clipboard.GetText() == searchResult.ResultName)
+                    TextCopy.Clipboard.SetText(string.Empty);
+
+                return new ValueTask<IHandleResult>(new HandleResult(true, false));
+            }
 
             // Regardless of the operation we want to copy the text
             TextCopy.Clipboard.SetText(searchResult.ResultName);
