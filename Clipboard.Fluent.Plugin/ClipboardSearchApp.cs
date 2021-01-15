@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Blast.API.Controllers.Keyboard;
@@ -85,13 +84,15 @@ namespace Clipboard.Fluent.Plugin
                 string searchedText = searchRequest.SearchedText;
                 string searchedTag = searchRequest.SearchedTag;
 
-                if (!string.IsNullOrWhiteSpace(searchedTag) && !searchedTag.Equals(SearchTag))
+                bool searchTagIsNotEmpty = !string.IsNullOrWhiteSpace(searchedTag);
+                if (searchTagIsNotEmpty && !searchedTag.Equals(SearchTag))
                     yield break;
 
                 foreach (string copy in _clipboardHistory)
                 {
                     double score = copy.SearchTokens(searchedText) * 2;
-                    if (score > 0)
+                    // Return results if the search worked or the tag used 
+                    if (score > 0 || searchTagIsNotEmpty)
                         yield return new ClipboardSearchResult(CopyIconGlyph, searchedText, copy, score,
                             _supportedOperations,
                             _searchTags);
