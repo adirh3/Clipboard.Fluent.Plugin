@@ -1,4 +1,4 @@
-# Translator.Fluent.Plugin
+# Clipboard.Fluent.Plugin
 
 ![alt text](clipboard_image.jpg "Title")
 
