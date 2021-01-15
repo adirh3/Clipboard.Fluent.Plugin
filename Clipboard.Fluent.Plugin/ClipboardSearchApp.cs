@@ -91,9 +91,10 @@ namespace Clipboard.Fluent.Plugin
                 foreach (string copy in _clipboardHistory)
                 {
                     double score = copy.SearchTokens(searchedText) * 2;
-                    yield return new ClipboardSearchResult(CopyIconGlyph, searchedText, copy, score,
-                        _supportedOperations,
-                        _searchTags);
+                    if (score > 0)
+                        yield return new ClipboardSearchResult(CopyIconGlyph, searchedText, copy, score,
+                            _supportedOperations,
+                            _searchTags);
                 }
             }
 
