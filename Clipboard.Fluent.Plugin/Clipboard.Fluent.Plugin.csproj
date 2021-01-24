@@ -2,11 +2,11 @@
 
     <PropertyGroup>
         <TargetFramework>net5.0-windows10.0.19041</TargetFramework>
-        <Version>1.0.0.1</Version>
+        <Version>1.0.0.3</Version>
     </PropertyGroup>
 
     <ItemGroup>
-        <PackageReference Include="Blast.API" Version="0.9.40-beta"/>
+        <PackageReference Include="Blast.API" Version="0.9.40.1-beta"/>
         <PackageReference Include="TextCopy" Version="1.5.1"/>
     </ItemGroup>
 
