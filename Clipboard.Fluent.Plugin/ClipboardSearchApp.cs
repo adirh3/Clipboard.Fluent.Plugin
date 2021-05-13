@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -55,9 +56,16 @@ namespace Clipboard.Fluent.Plugin
             {
                 while (true)
                 {
-                    string currentText = TextCopy.Clipboard.GetText();
-                    if (!string.IsNullOrWhiteSpace(currentText) && !_clipboardHistory.Contains(currentText))
-                        _clipboardHistory.Add(currentText);
+                    try
+                    {
+                        string currentText = TextCopy.Clipboard.GetText();
+                        if (!string.IsNullOrWhiteSpace(currentText) && !_clipboardHistory.Contains(currentText))
+                            _clipboardHistory.Add(currentText);
+                    }
+                    catch (Win32Exception)
+                    {
+                        // Access denided, can't copy this text
+                    }
 
                     await Task.Delay(5000);
                 }
