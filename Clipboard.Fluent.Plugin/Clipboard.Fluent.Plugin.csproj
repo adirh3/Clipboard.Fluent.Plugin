@@ -2,7 +2,7 @@
 
     <PropertyGroup>
         <TargetFramework>net5.0-windows10.0.19041</TargetFramework>
-        <Version>1.0.0.5</Version>
+        <Version>1.1.0.5</Version>
     </PropertyGroup>
 
     <ItemGroup>
