@@ -1,13 +1,13 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.ComponentModel;
-using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Blast.API.Controllers.Keyboard;
 using Blast.API.Core.Controllers.Keyboard;
 using Blast.API.Search;
 using Blast.API.Search.SearchOperations;
+using Blast.API.Settings;
 using Blast.Core;
 using Blast.Core.Interfaces;
 using Blast.Core.Objects;
@@ -23,23 +23,26 @@ namespace Clipboard.Fluent.Plugin
 
         private readonly Thread _thread;
         private readonly SearchApplicationInfo _applicationInfo;
-        private readonly HashSet<string> _clipboardHistory = new();
+        private HashSet<ClipboardHistoryItem> _clipboardHistory = new();
         private readonly List<ISearchOperation> _supportedOperations;
         private readonly IKeyboardController _keyboardControllerInstance;
         private readonly List<SearchTag> _searchTags;
+        private readonly ClipboardSearchAppSettings _clipboardSettings;
 
 
         public ClipboardSearchApp()
         {
             _searchTags = new List<SearchTag>
             {
-                new() {Name = SearchTag, IconGlyph = CopyIconGlyph}
+                new() { Name = SearchTag, IconGlyph = CopyIconGlyph }
             };
             _supportedOperations = new List<ISearchOperation>
             {
                 new PasteSearchOperation(),
                 new CopySearchOperation(),
-                new RemoveSearchOperation()
+                new SaveSearchOperation(),
+                new RemoveSearchOperation(),
+                new ClearAllSearchOperation()
             };
             _applicationInfo = new SearchApplicationInfo(SearchAppName,
                 "Search in your clipboard history", _supportedOperations)
@@ -51,6 +54,7 @@ namespace Clipboard.Fluent.Plugin
                 SearchAllTime = ApplicationSearchTime.Fast,
                 DefaultSearchTags = new List<SearchTag>()
             };
+            _applicationInfo.SettingsPage = _clipboardSettings = new ClipboardSearchAppSettings(_applicationInfo);
             _keyboardControllerInstance = KeyboardController.KeyboardControllerInstance;
             _thread = new Thread(async () =>
             {
@@ -59,8 +63,16 @@ namespace Clipboard.Fluent.Plugin
                     try
                     {
                         string currentText = TextCopy.Clipboard.GetText();
-                        if (!string.IsNullOrWhiteSpace(currentText) && !_clipboardHistory.Contains(currentText))
-                            _clipboardHistory.Add(currentText);
+                        var clipboardHistoryItem = new ClipboardHistoryItem { Text = currentText };
+
+                        if (!string.IsNullOrWhiteSpace(currentText))
+                        {
+                            if (_clipboardHistory.TryGetValue(clipboardHistoryItem,
+                                out ClipboardHistoryItem cachedItem))
+                                cachedItem.LastCopied = DateTime.Now;
+                            else
+                                _clipboardHistory.Add(clipboardHistoryItem);
+                        }
                     }
                     catch (Win32Exception)
                     {
@@ -74,6 +86,8 @@ namespace Clipboard.Fluent.Plugin
 
         public ValueTask LoadSearchApplicationAsync()
         {
+            // Update this only in LoadSearchApplicationAsync, since it happens AFTER settings are loaded 
+            _clipboardHistory = new HashSet<ClipboardHistoryItem>(_clipboardSettings.ClipboardHistoryItems);
             _thread.Start();
             return ValueTask.CompletedTask;
         }
@@ -100,15 +114,21 @@ namespace Clipboard.Fluent.Plugin
                     !searchTagIsNotEmpty && searchTextIsEmpty)
                     yield break;
 
-                for (var i = _clipboardHistory.Count - 1; i >= 0; i--)
+                foreach (ClipboardHistoryItem clipboardHistoryItem in _clipboardHistory)
                 {
-                    string copy = _clipboardHistory.ElementAt(i);
+                    var copy = clipboardHistoryItem.Text;
                     double score = copy.SearchTokens(searchedText) * 2;
+
                     // Return results if the search worked or the tag used 
                     if (score > 0 || searchTagIsNotEmpty && searchTextIsEmpty)
-                        yield return new ClipboardSearchResult(CopyIconGlyph, searchedText, copy, score,
-                            _supportedOperations,
-                            _searchTags);
+                    {
+                        // Increase score based on items that are more recent
+                        score += clipboardHistoryItem.LastCopied.ToFileTime() / (double)DateTime.Now.ToFileTime();
+                        if (clipboardHistoryItem.IsSaved)
+                            score++;
+                        yield return new ClipboardSearchResult(CopyIconGlyph, searchedText, score,
+                            _supportedOperations, _searchTags, clipboardHistoryItem);
+                    }
                 }
             }
 
@@ -116,21 +136,38 @@ namespace Clipboard.Fluent.Plugin
             return new SynchronousAsyncEnumerable(SearchClipboardHistory());
         }
 
-        public ValueTask<ISearchResult> GetSearchResultForId(string serializedSearchObjectId)
-        {
-            // This is used to calculate a search result after Fluent Search has been restarted
-            // This is only used by the custom search tag feature
-            return new();
-        }
-
         public ValueTask<IHandleResult> HandleSearchResult(ISearchResult searchResult)
         {
+            if (searchResult is not ClipboardSearchResult clipboardSearchResult)
+                throw new InvalidCastException(nameof(ClipboardSearchResult));
+
             ISearchOperation selectedOperation = searchResult.SelectedOperation;
             Type selectedOperationType = selectedOperation.GetType();
 
+            if (selectedOperationType == typeof(SaveSearchOperation))
+            {
+                _clipboardSettings.ClipboardHistoryItems.Add(clipboardSearchResult.ClipboardHistoryItem);
+                clipboardSearchResult.ClipboardHistoryItem.IsSaved = true;
+
+                // Save settings
+                SettingsUtils.SaveSettings(_clipboardSettings);
+
+                // Search again
+                return new ValueTask<IHandleResult>(new HandleResult(true, true));
+            }
+
+            if (selectedOperationType == typeof(ClearAllSearchOperation))
+            {
+                _clipboardHistory.RemoveWhere(s => !s.IsSaved);
+                return new ValueTask<IHandleResult>(new HandleResult(true, true));
+            }
+
             if (selectedOperationType == typeof(RemoveSearchOperation))
             {
-                _clipboardHistory.Remove(searchResult.ResultName);
+                _clipboardHistory.Remove(clipboardSearchResult.ClipboardHistoryItem);
+                clipboardSearchResult.ClipboardHistoryItem.IsSaved = false;
+                if (_clipboardSettings.ClipboardHistoryItems.Contains(clipboardSearchResult.ClipboardHistoryItem))
+                    _clipboardSettings.ClipboardHistoryItems.Remove(clipboardSearchResult.ClipboardHistoryItem);
                 searchResult.RemoveResult = true;
                 // If the current text is in the clipboard then replace it with empty string so it won't be added to history again
                 if (TextCopy.Clipboard.GetText() == searchResult.ResultName)
@@ -142,7 +179,7 @@ namespace Clipboard.Fluent.Plugin
             // Regardless of the operation we want to copy the text
             TextCopy.Clipboard.SetText(searchResult.ResultName);
             if (selectedOperationType == typeof(PasteSearchOperation))
-                _keyboardControllerInstance.PressKeysCombo(new List<VirtualKey> {VirtualKey.CTRL, VirtualKey.V});
+                _keyboardControllerInstance.PressKeysCombo(new List<VirtualKey> { VirtualKey.CTRL, VirtualKey.V });
 
             return new ValueTask<IHandleResult>(new HandleResult(true, false));
         }

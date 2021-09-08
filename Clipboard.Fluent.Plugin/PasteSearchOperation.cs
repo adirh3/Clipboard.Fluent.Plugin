@@ -1,7 +1,18 @@
-﻿using Blast.Core.Results;
+﻿using Avalonia.Input;
+using Blast.Core.Results;
 
 namespace Clipboard.Fluent.Plugin
 {
+    public class SaveSearchOperation : SearchOperationBase
+    {
+        protected internal SaveSearchOperation() : base("Keep result",
+            "Save the result, even after restart",
+            "\uE74E")
+        {
+            HideMainWindow = false;
+        }
+    }
+
     public class RemoveSearchOperation : SearchOperationBase
     {
         protected internal RemoveSearchOperation() : base("Remove from history",
@@ -9,16 +20,21 @@ namespace Clipboard.Fluent.Plugin
             "\uE74D")
         {
             HideMainWindow = false;
+            // Defaults to Delete gesture
+            KeyGesture = new KeyGesture(Key.Delete);
         }
     }
-
-    public class PasteSearchOperation : SearchOperationBase
+    
+    public class ClearAllSearchOperation : SearchOperationBase
     {
-        protected internal PasteSearchOperation() : base("Paste text", "Closes Fluent Search and pastes the text",
-            "\uE77F")
+        protected internal ClearAllSearchOperation() : base("Clear all (except saved)",
+            "Clear all clipboard results except saved ones",
+            "\uE74D")
         {
-            // Makes sure that Fluent is hidden
-            HideMainWindow = true;
+            HideMainWindow = false;
+            // Defaults to Delete gesture
+            KeyGesture = new KeyGesture(Key.Delete);
         }
     }
+    
 }
