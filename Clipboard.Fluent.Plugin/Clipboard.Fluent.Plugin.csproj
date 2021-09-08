@@ -7,7 +7,6 @@
 
     <ItemGroup>
         <PackageReference Include="Blast.API" Version="0.9.89.1-beta" />
-        <PackageReference Include="TextCopy" Version="1.5.1" />
     </ItemGroup>
 
 </Project>

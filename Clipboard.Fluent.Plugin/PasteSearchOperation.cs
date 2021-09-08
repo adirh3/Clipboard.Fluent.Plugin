@@ -10,6 +10,8 @@ namespace Clipboard.Fluent.Plugin
             "\uE74E")
         {
             HideMainWindow = false;
+            // Control + S for save by default
+            KeyGesture = new KeyGesture(Key.S, KeyModifiers.Control);
         }
     }
 
@@ -32,8 +34,7 @@ namespace Clipboard.Fluent.Plugin
             "\uE74D")
         {
             HideMainWindow = false;
-            // Defaults to Delete gesture
-            KeyGesture = new KeyGesture(Key.Delete);
+            KeyGesture = new KeyGesture(Key.Delete, KeyModifiers.Shift);
         }
     }
     

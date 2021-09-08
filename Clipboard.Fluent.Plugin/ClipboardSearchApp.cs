@@ -1,10 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.ComponentModel;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using Blast.API.Controllers.Keyboard;
-using Blast.API.Core.Controllers.Keyboard;
 using Blast.API.Search;
 using Blast.API.Search.SearchOperations;
 using Blast.API.Settings;
@@ -25,7 +24,6 @@ namespace Clipboard.Fluent.Plugin
         private readonly SearchApplicationInfo _applicationInfo;
         private HashSet<ClipboardHistoryItem> _clipboardHistory = new();
         private readonly List<ISearchOperation> _supportedOperations;
-        private readonly IKeyboardController _keyboardControllerInstance;
         private readonly List<SearchTag> _searchTags;
         private readonly ClipboardSearchAppSettings _clipboardSettings;
 
@@ -38,8 +36,8 @@ namespace Clipboard.Fluent.Plugin
             };
             _supportedOperations = new List<ISearchOperation>
             {
-                new PasteSearchOperation(),
-                new CopySearchOperation(),
+                new PasteSearchOperationSelfRun(),
+                new CopySearchOperationSelfRun(),
                 new SaveSearchOperation(),
                 new RemoveSearchOperation(),
                 new ClearAllSearchOperation()
@@ -55,7 +53,7 @@ namespace Clipboard.Fluent.Plugin
                 DefaultSearchTags = new List<SearchTag>()
             };
             _applicationInfo.SettingsPage = _clipboardSettings = new ClipboardSearchAppSettings(_applicationInfo);
-            _keyboardControllerInstance = KeyboardController.KeyboardControllerInstance;
+            // ReSharper disable once AsyncVoidLambda
             _thread = new Thread(async () =>
             {
                 while (true)
@@ -76,7 +74,7 @@ namespace Clipboard.Fluent.Plugin
                     }
                     catch (Win32Exception)
                     {
-                        // Access denided, can't copy this text
+                        // Access denied, can't copy this text
                     }
 
                     await Task.Delay(5000);
@@ -114,7 +112,8 @@ namespace Clipboard.Fluent.Plugin
                     !searchTagIsNotEmpty && searchTextIsEmpty)
                     yield break;
 
-                foreach (ClipboardHistoryItem clipboardHistoryItem in _clipboardHistory)
+                foreach (ClipboardHistoryItem clipboardHistoryItem in _clipboardHistory.OrderByDescending(s =>
+                    s.LastCopied))
                 {
                     var copy = clipboardHistoryItem.Text;
                     double score = copy.SearchTokens(searchedText) * 2;
@@ -123,9 +122,9 @@ namespace Clipboard.Fluent.Plugin
                     if (score > 0 || searchTagIsNotEmpty && searchTextIsEmpty)
                     {
                         // Increase score based on items that are more recent
-                        score += clipboardHistoryItem.LastCopied.ToFileTime() / (double)DateTime.Now.ToFileTime();
+                        score += 2.0 * clipboardHistoryItem.LastCopied.ToFileTime() / DateTime.Now.ToFileTime();
                         if (clipboardHistoryItem.IsSaved)
-                            score++;
+                            score += 2;
                         yield return new ClipboardSearchResult(CopyIconGlyph, searchedText, score,
                             _supportedOperations, _searchTags, clipboardHistoryItem);
                     }
@@ -173,13 +172,10 @@ namespace Clipboard.Fluent.Plugin
                 if (TextCopy.Clipboard.GetText() == searchResult.ResultName)
                     TextCopy.Clipboard.SetText(string.Empty);
 
-                return new ValueTask<IHandleResult>(new HandleResult(true, false));
+                SettingsUtils.SaveSettings(_clipboardSettings);
+                return new ValueTask<IHandleResult>(new HandleResult(true, true));
             }
-
-            // Regardless of the operation we want to copy the text
-            TextCopy.Clipboard.SetText(searchResult.ResultName);
-            if (selectedOperationType == typeof(PasteSearchOperation))
-                _keyboardControllerInstance.PressKeysCombo(new List<VirtualKey> { VirtualKey.CTRL, VirtualKey.V });
+            
 
             return new ValueTask<IHandleResult>(new HandleResult(true, false));
         }
