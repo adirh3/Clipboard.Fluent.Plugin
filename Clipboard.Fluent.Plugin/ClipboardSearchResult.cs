@@ -9,15 +9,15 @@ namespace Clipboard.Fluent.Plugin
         public ClipboardHistoryItem ClipboardHistoryItem { get; }
 
         public ClipboardSearchResult(string iconGlyph, string searchedText, double score,
-            List<ISearchOperation> searchOperations, List<SearchTag> searchTags,
+            IList<ISearchOperation> searchOperations, ICollection<SearchTag> searchTags,
             ClipboardHistoryItem clipboardHistoryItem) : base(clipboardHistoryItem.Text, searchedText,
-            clipboardHistoryItem.IsSaved ? "Saved Copy" : "Copy",
-            score, searchOperations, searchTags)
+            "Copy", score, searchOperations, searchTags)
         {
             ClipboardHistoryItem = clipboardHistoryItem;
             UseIconGlyph = true;
             IconGlyph = iconGlyph;
             ShouldCacheResult = false;
+            DisableMachineLearning = true; // Making sure results are ordered by time
         }
 
         protected override void OnSelectedSearchResultChanged()

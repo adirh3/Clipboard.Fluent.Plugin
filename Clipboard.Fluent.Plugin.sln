@@ -2,8 +2,6 @@
 Microsoft Visual Studio Solution File, Format Version 12.00
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Clipboard.Fluent.Plugin", "Clipboard.Fluent.Plugin\Clipboard.Fluent.Plugin.csproj", "{3CB71DB2-9415-4CE4-9189-7E2086FAF967}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Clipboard.Fluent.Console", "Clipboard.Fluent.Console\Clipboard.Fluent.Console.csproj", "{8203B85F-5F4C-48C5-9D16-ED7C81818862}"
-EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -14,9 +12,5 @@ Global
 		{3CB71DB2-9415-4CE4-9189-7E2086FAF967}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{3CB71DB2-9415-4CE4-9189-7E2086FAF967}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{3CB71DB2-9415-4CE4-9189-7E2086FAF967}.Release|Any CPU.Build.0 = Release|Any CPU
-		{8203B85F-5F4C-48C5-9D16-ED7C81818862}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{8203B85F-5F4C-48C5-9D16-ED7C81818862}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{8203B85F-5F4C-48C5-9D16-ED7C81818862}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{8203B85F-5F4C-48C5-9D16-ED7C81818862}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal

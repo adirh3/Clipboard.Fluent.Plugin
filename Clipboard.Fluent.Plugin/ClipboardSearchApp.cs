@@ -19,6 +19,7 @@ namespace Clipboard.Fluent.Plugin
         private const string SearchTag = "clipboard";
         private const string SearchAppName = "Clipboard";
         private const string CopyIconGlyph = "\uE8C8";
+        private const string PinnedIcon = "\ue840";
 
         private readonly Thread _thread;
         private readonly SearchApplicationInfo _applicationInfo;
@@ -32,7 +33,7 @@ namespace Clipboard.Fluent.Plugin
         {
             _searchTags = new List<SearchTag>
             {
-                new() { Name = SearchTag, IconGlyph = CopyIconGlyph }
+                new() {Name = SearchTag, IconGlyph = CopyIconGlyph}
             };
             _supportedOperations = new List<ISearchOperation>
             {
@@ -61,12 +62,12 @@ namespace Clipboard.Fluent.Plugin
                     try
                     {
                         string currentText = TextCopy.Clipboard.GetText();
-                        var clipboardHistoryItem = new ClipboardHistoryItem { Text = currentText };
+                        var clipboardHistoryItem = new ClipboardHistoryItem {Text = currentText};
 
                         if (!string.IsNullOrWhiteSpace(currentText))
                         {
                             if (_clipboardHistory.TryGetValue(clipboardHistoryItem,
-                                out ClipboardHistoryItem cachedItem))
+                                    out ClipboardHistoryItem cachedItem))
                                 cachedItem.LastCopied = DateTime.Now;
                             else
                                 _clipboardHistory.Add(clipboardHistoryItem);
@@ -113,10 +114,10 @@ namespace Clipboard.Fluent.Plugin
                     yield break;
 
                 foreach (ClipboardHistoryItem clipboardHistoryItem in _clipboardHistory.OrderByDescending(s =>
-                    s.LastCopied))
+                             s.LastCopied))
                 {
-                    var copy = clipboardHistoryItem.Text;
-                    double score = copy.SearchTokens(searchedText) * 2;
+                    string copy = clipboardHistoryItem.Text;
+                    double score = copy.SearchTokens(searchedText);
 
                     // Return results if the search worked or the tag used 
                     if (score > 0 || searchTagIsNotEmpty && searchTextIsEmpty)
@@ -125,8 +126,9 @@ namespace Clipboard.Fluent.Plugin
                         score += 2.0 * clipboardHistoryItem.LastCopied.ToFileTime() / DateTime.Now.ToFileTime();
                         if (clipboardHistoryItem.IsSaved)
                             score += 2;
-                        yield return new ClipboardSearchResult(CopyIconGlyph, searchedText, score,
-                            _supportedOperations, _searchTags, clipboardHistoryItem);
+                        yield return new ClipboardSearchResult(
+                            clipboardHistoryItem.IsSaved ? PinnedIcon : CopyIconGlyph,
+                            searchedText, score, _supportedOperations, _searchTags, clipboardHistoryItem);
                     }
                 }
             }
@@ -175,7 +177,7 @@ namespace Clipboard.Fluent.Plugin
                 SettingsUtils.SaveSettings(_clipboardSettings);
                 return new ValueTask<IHandleResult>(new HandleResult(true, true));
             }
-            
+
 
             return new ValueTask<IHandleResult>(new HandleResult(true, false));
         }
