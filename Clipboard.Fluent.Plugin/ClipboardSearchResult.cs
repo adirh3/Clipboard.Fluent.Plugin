@@ -13,6 +13,7 @@ namespace Clipboard.Fluent.Plugin
             ClipboardHistoryItem clipboardHistoryItem) : base(clipboardHistoryItem.Text, searchedText,
             "Copy", score, searchOperations, searchTags)
         {
+            SearchObjectId = clipboardHistoryItem;
             ClipboardHistoryItem = clipboardHistoryItem;
             UseIconGlyph = true;
             IconGlyph = iconGlyph;

@@ -95,6 +95,14 @@ namespace Clipboard.Fluent.Plugin
         {
             return _applicationInfo;
         }
+        
+        public ValueTask<ISearchResult> GetSearchResultForId(object searchObjectId)
+        {
+            if (searchObjectId is ClipboardHistoryItem clipboardHistoryItem)
+                return new ValueTask<ISearchResult>(new ClipboardSearchResult(PinnedIcon, string.Empty, 0,
+                    _supportedOperations, _searchTags, clipboardHistoryItem));
+            return new ValueTask<ISearchResult>();
+        }
 
         public IAsyncEnumerable<ISearchResult> SearchAsync(SearchRequest searchRequest,
             CancellationToken cancellationToken)
