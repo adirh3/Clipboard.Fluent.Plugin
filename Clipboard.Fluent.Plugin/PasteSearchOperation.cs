@@ -15,6 +15,30 @@ namespace Clipboard.Fluent.Plugin
         }
     }
 
+    /// <summary>
+    /// Puts the image back on the clipboard and pastes it into the previously active window.
+    /// </summary>
+    public class PasteImageSearchOperation : SearchOperationBase
+    {
+        protected internal PasteImageSearchOperation() : base("Paste image",
+            "Paste the image into the active application",
+            "")
+        {
+        }
+    }
+
+    /// <summary>
+    /// Puts the image back on the clipboard.
+    /// </summary>
+    public class CopyImageSearchOperation : SearchOperationBase
+    {
+        protected internal CopyImageSearchOperation() : base("Copy image",
+            "Copy the image to the clipboard",
+            "")
+        {
+        }
+    }
+
     public class RemoveSearchOperation : SearchOperationBase
     {
         protected internal RemoveSearchOperation() : base("Remove from history",

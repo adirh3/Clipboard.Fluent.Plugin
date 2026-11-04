@@ -1,19 +1,49 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
     <PropertyGroup>
-        <TargetFramework>net6.0</TargetFramework>
         <Version>1.2.0.8</Version>
         <EnableDynamicLoading>true</EnableDynamicLoading>
-        <RestoreAdditionalProjectSources>
-            https://nuget.avaloniaui.net/repository/avalonia-nightly/index.json;
-        </RestoreAdditionalProjectSources>
+        <ImplicitUsings>disable</ImplicitUsings>
+        <Nullable>disable</Nullable>
+        <EnablePreviewFeatures>true</EnablePreviewFeatures>
     </PropertyGroup>
 
-    <ItemGroup>
-        <PackageReference Include="Blast.API" Version="0.9.91-*">
+    <!--
+        Default: build against the Blast.API NuGet package, as described in the plugin authoring guide.
+
+        Alternative: build against an installed Fluent Search, so the API matches that exact version, with
+            dotnet build -c Release -p:FluentSearchDir="C:\Program Files\Fluent Search"
+        This needs the .NET SDK that matches the target framework of the installed Fluent Search (e.g. 11 for 1.5.x).
+    -->
+    <PropertyGroup Condition="'$(FluentSearchDir)' == ''">
+        <TargetFramework>net10.0</TargetFramework>
+    </PropertyGroup>
+
+    <ItemGroup Condition="'$(FluentSearchDir)' == ''">
+        <PackageReference Include="Blast.API" Version="1.0.1.*-*">
             <Private>false</Private>
             <ExcludeAssets>runtime</ExcludeAssets>
         </PackageReference>
+    </ItemGroup>
+
+    <PropertyGroup Condition="'$(FluentSearchDir)' != ''">
+        <TargetFramework>net11.0</TargetFramework>
+        <!-- The installed (self-contained) Fluent Search assemblies reference System.Private.CoreLib directly,
+             so compile against its runtime assemblies instead of the SDK's reference pack -->
+        <DisableImplicitFrameworkReferences>true</DisableImplicitFrameworkReferences>
+        <NoStdLib>true</NoStdLib>
+    </PropertyGroup>
+
+    <ItemGroup Condition="'$(FluentSearchDir)' != ''">
+        <HostRuntime Include="$(FluentSearchDir)\System.*.dll" />
+        <HostRuntime Include="$(FluentSearchDir)\Microsoft.Win32.*.dll" />
+        <HostRuntime Include="$(FluentSearchDir)\netstandard.dll;$(FluentSearchDir)\mscorlib.dll" />
+        <Reference Include="@(HostRuntime)"><Private>false</Private></Reference>
+        <Reference Include="Blast.API"><HintPath>$(FluentSearchDir)\Blast.API.dll</HintPath><Private>false</Private></Reference>
+        <Reference Include="Blast.Core"><HintPath>$(FluentSearchDir)\Blast.Core.dll</HintPath><Private>false</Private></Reference>
+        <Reference Include="Blast.API.Core"><HintPath>$(FluentSearchDir)\Blast.API.Core.dll</HintPath><Private>false</Private></Reference>
+        <Reference Include="Avalonia.Base"><HintPath>$(FluentSearchDir)\Avalonia.Base.dll</HintPath><Private>false</Private></Reference>
+        <Reference Include="TextCopy"><HintPath>$(FluentSearchDir)\TextCopy.dll</HintPath><Private>false</Private></Reference>
     </ItemGroup>
 
 </Project>
